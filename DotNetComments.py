@@ -12,8 +12,7 @@ class DotNetComments(sublime_plugin.EventListener):
 	def on_modified(self, view):
 
 		# Get the file type. If we are not a .cs file, then just exit
-		syntax_type = view.settings().get('syntax')
-		if not re.match('.*C#.tmLanguage', syntax_type):
+		if not view.match_selector(0, "source.cs"):	
 			return
 
 		# Iterate through the regions in the view selection.
@@ -35,14 +34,14 @@ class DotNetComments(sublime_plugin.EventListener):
 
 
 class DotNetSummaryCommentCommand(sublime_plugin.TextCommand):
-	def run(self, edit, args):
+	def run(self, edit, comment_block):
 
 		# Add the comment block to the page
 		pos = self.view.sel()[0].begin()
-		self.view.insert(edit, pos, args["comment_block"][0])
+		self.view.insert(edit, pos, comment_block[0])
 
 		# Get the point to place the cursor at
-		pt = self.view.text_point(args["comment_block"][1], args["comment_block"][2])
+		pt = self.view.text_point(comment_block[1], comment_block[2])
 
 		# Set the cursor on the buffer 
 		self.view.sel().clear()
@@ -66,7 +65,7 @@ def add_comments_to_file(view):
 
 	# Get the comment block based on the code section type and add to the buffer.
 	comment_block = get_comment_text(code_section_type, next_line_contents[0], view);
-	view.run_command('dot_net_summary_comment', {"args":{'comment_block': comment_block}})
+	view.run_command('dot_net_summary_comment', {'comment_block': comment_block})
 
 
 def get_next_line_contents(view, line):
