@@ -116,28 +116,31 @@ def get_comment_text(code_section_type, line_contents, view):
 	# define the parameter comment block
 	parameter_comment_block = ''
 
+	# Get the new line chars based on the settings/system
+	nl_char = get_new_line_chars(view)
+
 	# If it's a method or a constructor, then we should also look for the parameters to add to the comment block as well
 	if code_section_type == CODE_SECTION_CONSTRUCTOR or code_section_type == CODE_SECTION_METHOD or code_section_type == CODE_SECTION_METHOD_WITH_RETURN:
 		raw_parameters = get_parameters_for_method(view, view.sel()[0])
-		parameter_comment_block = build_parameter_comments(raw_parameters, indent)
+		parameter_comment_block = build_parameter_comments(raw_parameters, indent, nl_char)
 		if parameter_comment_block is None:
 			parameter_comment_block = ""
 
 	if code_section_type == CODE_SECTION_CLASS:
-		return (' <summary>\n' + indent + '/// \n' + indent + '/// </summary>', cursor_line, cursor_column)
+		return (' <summary>' + nl_char + indent + '/// ' + nl_char + indent + '/// </summary>', cursor_line, cursor_column)
 	elif code_section_type == CODE_SECTION_CONSTRUCTOR or code_section_type == CODE_SECTION_METHOD:
-		return (' <summary>\n' + indent + '/// \n' + indent + '/// </summary>' + parameter_comment_block, cursor_line, cursor_column)
+		return (' <summary>' + nl_char + indent + '/// ' + nl_char + indent + '/// </summary>' + parameter_comment_block, cursor_line, cursor_column)
 	elif code_section_type == CODE_SECTION_METHOD_WITH_RETURN:
 		type_param_block = ''
 
 		# If there is a type parameter (ie <T>) add the type parameter
 		match = re.search('^\s*[<>\w\s]*\s+([a-zA-Z_][\w]+)(?:<([A-Za-z]*)>)\s*\(.*$', line_contents)	
 		if match is not None:
-			type_param_block = '\n' + indent + '/// <typeparam name="' + match.group(2) + '"></typeparam>'
+			type_param_block = nl_char + indent + '/// <typeparam name="' + match.group(2) + '"></typeparam>'
 
-		return (' <summary>\n' + indent + '/// \n' + indent + '/// </summary>' + type_param_block + parameter_comment_block + '\n' + indent + '/// <returns></returns>', cursor_line, cursor_column)
+		return (' <summary>' + nl_char + indent + '/// ' + nl_char + indent + '/// </summary>' + type_param_block + parameter_comment_block +  + nl_char + indent + '/// <returns></returns>', cursor_line, cursor_column)
 	else:
-		return (' <summary>\n' + indent + '/// \n' + indent + '/// </summary>', cursor_line, cursor_column)
+		return (' <summary>' + nl_char + indent + '/// ' + nl_char + indent + '/// </summary>', cursor_line, cursor_column)
 
 
 def get_code_section_type(line_contents, line, view, recurse_level):
@@ -170,7 +173,7 @@ def get_code_section_type(line_contents, line, view, recurse_level):
 		return CODE_SECTION_PROP
 
 
-def build_parameter_comments(raw_parameters, indent):
+def build_parameter_comments(raw_parameters, indent, nl_char):
 
 	# replace all commas within quotes with nothing, so that we can just split by comma
 	raw_parameters = re.sub('([()])|("[^"]*")', '', raw_parameters)
@@ -185,7 +188,7 @@ def build_parameter_comments(raw_parameters, indent):
 
 		# If there is a match, then add to the comment block
 		if match is not None:
-			comment_parameters_block += '\n' + indent + '/// <param name="' + match.group(1) + '"></param>'
+			comment_parameters_block += nl_char + indent + '/// <param name="' + match.group(1) + '"></param>'
 
 	return comment_parameters_block
 
@@ -200,3 +203,24 @@ def get_parameters_for_method(view, region):
 		parameters_text = ''
 
 	return parameters_text
+
+
+def get_new_line_chars(view):
+
+	# Get the setting object from the view
+	settings = view.settings()
+
+	# Get the default line ending
+	default_line_ending = settings.get('default_line_ending', 'system')
+
+	# Set the default line ending char to be linux/mac
+	newline_char = '\n'
+
+	# If settings are set to windows, or we are on a windows system, then change to CRLF
+	if default_line_ending == 'windows':
+		newline_char = '\r\n'
+	elif default_line_ending == 'system':
+		if sublime.platform() == 'windows':
+			newline_char = '\r\n'
+
+	return newline_char
